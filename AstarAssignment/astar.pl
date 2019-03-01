@@ -22,6 +22,34 @@ mkList(X,[X]).
 
 initKB(File) :- retractall(kb(_)), makeKB(File).
 
-astar(Node,Path,Cost) :- kb(KB), astar(Node,Path,Cost,KB).
 
-astar(Node,Path,Cost,KB) :- 
+astar(Node,Path,Cost) :- kb(KB),
+						 astar([[Node, [], 0]],Path,Cost,KB).
+
+astar([[Node, Path, Cost]|_], [Node,Path], Cost, _) :- goal(Node).
+astar([[Node, P, C]|Rest], Path, Cost, KB) :-
+							findall([X,[Node|P],Sum], (arc(Node, X, Y, KB), Sum is Y+C), Children),
+							addtofrontier(Children, Rest, Temp),
+							astar(Temp, Path, Cost, KB).
+
+goal([]).
+heuristic(Node, H) :- length(Node, H).
+
+arc([H|T],Node,Cost,KB) :- member([H|B],KB),
+						   append(B,T,Node),
+						   length(B,L),
+						   Cost is L+1.
+
+addtofrontier(Children, Frontier, NewFrontier) :- append(Children, Frontier, Temp), minSort(Temp, NewFrontier).
+
+minSort([Head|Tail], Result) :- sort(Head, [], Tail, Result).
+sort(Head, S, [], [Head|S]).
+sort(C, S, [Head|Tail], Result) :- lessthan(C, Head), !,
+								   sort(C, [Head|S], Tail, Result);
+								   sort(Head, [C|S], Tail, Result).
+
+lessthan([Node1,_,Cost1|_],[Node2,_,Cost2|_]) :- heuristic(Node1,Hvalue1),
+												 heuristic(Node2,Hvalue2),
+												 F1 is Cost1+Hvalue1,
+												 F2 is Cost2+Hvalue2,
+												 F1 =< F2.
